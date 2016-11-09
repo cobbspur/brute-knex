@@ -1,10 +1,11 @@
 'use strict';
 var AbstractClientStore = require('express-brute/lib/AbstractClientStore');
 var _ = require('lodash');
+var Promise = require('bluebird');
 
 var KnexStore = module.exports = function (options) {
   var self = this;
-  
+
   AbstractClientStore.apply(this, arguments);
   this.options = _.extend({}, KnexStore.defaults, options);
 
@@ -14,17 +15,22 @@ var KnexStore = module.exports = function (options) {
     this.knex = require('knex')(KnexStore.defaultsKnex);
   }
 
-  self.ready = self.knex.schema.hasTable(self.options.tablename).then(function (exists) {
-    if (!exists && options.createTable) {
-      return self.knex.schema.createTable(self.options.tablename, function (table) {
-        table.string('key');
-        table.timestamp('firstRequest');
-        table.timestamp('lastRequest');
-        table.timestamp('lifetime');
-        table.integer('count');
-      })
-    }
-  })
+  if (!options.createTable) {
+    self.ready = Promise.resolve();
+      return;
+  } else {
+    self.ready = self.knex.schema.hasTable(self.options.tablename).then(function (exists) {
+      if (!exists && options.createTable) {
+        return self.knex.schema.createTable(self.options.tablename, function (table) {
+          table.string('key');
+          table.timestamp('firstRequest');
+          table.timestamp('lastRequest');
+          table.timestamp('lifetime');
+          table.integer('count');
+        })
+      }
+    });
+  }
 };
 KnexStore.prototype = Object.create(AbstractClientStore.prototype);
 KnexStore.prototype.set = function (key, value, lifetime, callback) {
