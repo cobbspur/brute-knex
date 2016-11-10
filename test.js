@@ -7,41 +7,28 @@ const Knex = require('knex');
 const assert = require('assert');
 const fs = require('fs');
 const test = require('tape');
+const config = require('ghost-ignition').config();
 
 if (fs.existsSync('express-brute-knex-test.sqlite')) {
   fs.unlinkSync('express-brute-knex-test.sqlite');
 }
 
 const sqliteknex = new Knex({
-  debug: true,
+  debug: false,
   client: 'sqlite3',
-  connection: {
-    filename: "express-brute-knex-test.sqlite"
-  }
+  connection: config.get('sqlite')
 });
 
 const postgresknex = new Knex({
-  debug: true,
+  debug: false,
   client: 'pg',
-  connection: {
-    host     : '127.0.0.1',
-    user     : 'travis',
-    password : '',
-    database : 'travis_ci_test',
-    charset  : 'utf8',
-  }
+  connection: config.get('postgres')
 });
 
 const mysqlknex = new Knex({
-  debug: true,
+  debug: false,
   client: 'mysql',
-  connection: {
-    host     : 'localhost',
-    user     : 'travis',
-    password : '',
-    database : 'travis',
-    charset  : 'utf8',
-  },
+  connection: config.get('mysql'),
   pool: {
     min: 1,
     max: 1

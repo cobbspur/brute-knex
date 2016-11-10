@@ -3,6 +3,12 @@ var AbstractClientStore = require('express-brute/lib/AbstractClientStore');
 var _ = require('lodash');
 var Promise = require('bluebird');
 
+/**
+ * we are using bigInteger to store a UTC timestamp
+ * alternative would be using moment-timezone to store YYYY-MM-DD HH:mm:ss (but it does not contain ms)
+ *
+ * @type {module.exports}
+ */
 var KnexStore = module.exports = function (options) {
   var self = this;
 
@@ -15,17 +21,16 @@ var KnexStore = module.exports = function (options) {
     this.knex = require('knex')(KnexStore.defaultsKnex);
   }
 
-  if (!options.createTable) {
+  if (options.createTable === false) {
     self.ready = Promise.resolve();
-      return;
   } else {
     self.ready = self.knex.schema.hasTable(self.options.tablename).then(function (exists) {
-      if (!exists && options.createTable) {
+      if (!exists) {
         return self.knex.schema.createTable(self.options.tablename, function (table) {
           table.string('key');
-          table.timestamp('firstRequest');
-          table.timestamp('lastRequest');
-          table.timestamp('lifetime');
+          table.bigInteger('firstRequest').nullable();
+          table.bigInteger('lastRequest').nullable();
+          table.bigInteger('lifetime').nullable();
           table.integer('count');
         })
       }
@@ -33,6 +38,7 @@ var KnexStore = module.exports = function (options) {
   }
 };
 KnexStore.prototype = Object.create(AbstractClientStore.prototype);
+
 KnexStore.prototype.set = function (key, value, lifetime, callback) {
   var self = this;
   lifetime = lifetime || 0;
@@ -45,24 +51,25 @@ KnexStore.prototype.set = function (key, value, lifetime, callback) {
           return trx.from(self.options.tablename)
           .insert({
             key: key,
-            lifetime: (new Date(Date.now() + lifetime  * 1000)).toISOString(),
-            lastRequest: value.lastRequest,
-            firstRequest: value.firstRequest,
+            lifetime: new Date(Date.now() + lifetime  * 1000).getTime(),
+            lastRequest: new Date(value.lastRequest).getTime(),
+            firstRequest: new Date(value.firstRequest).getTime(),
             count: value.count
           })
         } else {
           return trx(self.options.tablename)
           .where('key', '=', key)
           .update({
-            lifetime: (new Date(Date.now() + lifetime  * 1000)).toISOString(),
+            lifetime: new Date(Date.now() + lifetime  * 1000).getTime(),
             count: value.count,
-            lastRequest: value.lastRequest
+            lastRequest: new Date(value.lastRequest).getTime()
           })
         }
       })
     })
   }).asCallback(callback);
 };
+
 KnexStore.prototype.get = function (key, callback) {
   var self = this;
   return self.ready.tap(function () {
@@ -104,9 +111,9 @@ KnexStore.prototype.increment = function (key, lifetime, callback) {
       return self.knex(self.options.tablename)
       .insert({
         key: key,
-        firstRequest: (new Date()).toISOString(),
-        lastRequest: (new Date()).toISOString(),
-        lifetime: (new Date(Date.now() + lifetime * 1000)).toISOString(),
+        firstRequest: new Date().getTime(),
+        lastRequest: new Date().getTime(),
+        lifetime: new Date(Date.now() + lifetime  * 1000).getTime(),
         count: 1
       })
     }
@@ -118,7 +125,7 @@ KnexStore.prototype.clearExpired = function (callback) {
   return self.ready.then(function () {
     return self.knex(self.options.tablename)
     .del()
-    .where('lifetime', '<', (new Date()).toISOString());
+    .where('lifetime', '<', new Date().getTime())
   }).asCallback(callback);
 };
 
@@ -133,4 +140,4 @@ KnexStore.defaultsKnex = {
   connection: {
     filename: "./brute-knex.sqlite"
   }
-}
+};
