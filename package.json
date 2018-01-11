@@ -27,7 +27,7 @@
   "dependencies": {
     "express": "^4.14.0",
     "express-brute": "^1.0.0",
-    "knex": "^0.12.2",
+    "knex": "^0.14.2",
     "lodash": "^4.16.3"
   }
 }
