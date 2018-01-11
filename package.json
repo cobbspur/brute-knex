@@ -25,9 +25,9 @@
     "ghost-ignition": "2.0.0"
   },
   "dependencies": {
-    "express": "4.14.0",
-    "express-brute": "1.0.0",
-    "knex": "0.12.2",
-    "lodash": "4.16.3"
+    "express": "^4.14.0",
+    "express-brute": "^1.0.0",
+    "knex": "^0.12.2",
+    "lodash": "^4.16.3"
   }
 }
